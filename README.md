@@ -1,1 +1,215 @@
-# electric-item
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Electric Market</title>
+<style>
+body{font-family:Arial;background:#f2f2f2;padding:20px}
+.box{background:#fff;padding:15px;border-radius:8px;margin-bottom:15px}
+input,button,select{padding:8px;margin:5px}
+button{border:none;border-radius:5px;color:#fff;cursor:pointer}
+.blue{background:#007bff}
+.green{background:#28a745}
+.red{background:#dc3545}
+.gray{background:#6c757d}
+.market{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px}
+.item{background:#fff;padding:10px;border-radius:8px;text-align:center}
+.item img{width:100%;height:100px;object-fit:cover}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center}
+</style>
+</head>
+<body>
+
+<h2>⚡ Electric Market</h2>
+
+<!-- REGISTER -->
+<div class="box" id="registerBox">
+<h3>User Register</h3>
+<input id="rMobile" placeholder="Mobile Number"><br>
+<input id="rPass" type="password" placeholder="Password"><br>
+<button class="blue" onclick="sendOTP()">Send OTP</button><br>
+<input id="otp" placeholder="Enter OTP"><br>
+<button class="green" onclick="register()">Register</button>
+<p id="rMsg"></p>
+</div>
+
+<!-- LOGIN -->
+<div class="box" id="loginBox">
+<h3>Login</h3>
+<input id="lMobile" placeholder="Mobile Number"><br>
+<input id="lPass" type="password" placeholder="Password"><br>
+<button class="blue" onclick="login()">Login</button>
+<p id="lMsg"></p>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none">
+
+<div class="box">
+<h3>Welcome: <span id="userMobile"></span></h3>
+<h3>Balance: $<span id="balance">0</span></h3>
+<a href="https://forms.gle/9r8ni9ggAkUgGBk8A" target="_blank">
+    <button>Reacharge</button>
+</a>
+<button class="red" onclick="withdraw()">Withdraw</button>
+<button class="gray" onclick="logout()">Logout</button>
+<p id="msg"></p>
+</div>
+
+<!-- OWNER PANEL -->
+<div class="box" id="ownerPanel" style="display:none">
+<h3>👑 Owner Panel</h3>
+
+<button class="green" onclick="addDailyIncome()">Add Daily Income +$10 (All Users)</button><br><br>
+
+<select id="userSelect"></select>
+<input id="ownerAmount" type="number" placeholder="Amount">
+<button class="blue" onclick="addBalanceToUser()">Add Balance to User</button>
+
+<h4>Total Users: <span id="totalUsers">0</span></h4>
+
+<table>
+<thead>
+<tr><th>Mobile</th><th>Balance</th></tr>
+</thead>
+<tbody id="userTable"></tbody>
+</table>
+</div>
+
+<!-- MARKET -->
+<div class="market" id="market"></div>
+
+</div>
+
+<script>
+let currentUser=null;
+let generatedOTP=null;
+
+const items=[
+["LED Bulb Daily Income 130",520],["Fan Daily Income 369",680],["Iron Daily Income 599",1060],["Heater Daily Income 999",1520],
+["Extension Daily Income 1699",3525],["Switch",15],["Socket",12],["Battery",50],
+["Inverter",300],["Solar Panel",400],["Kettle",70],
+["Mixer",90],["Washing Machine",500],["Fridge",700],
+["AC",900],["TV",600],["Stabilizer",110],
+["MCB",30],["Charger",40],["UPS",350]
+];
+
+function users(){return JSON.parse(localStorage.getItem("users")||"{}")}
+function save(u){localStorage.setItem("users",JSON.stringify(u))}
+
+function sendOTP(){
+generatedOTP=Math.floor(1000+Math.random()*9000);
+rMsg.innerText="📩 OTP Sent (Demo): "+generatedOTP;
+}
+
+function register(){
+let u=users();
+if(otp.value!=generatedOTP){rMsg.innerText="❌ Wrong OTP";return;}
+if(u[rMobile.value]){rMsg.innerText="❌ User exists";return;}
+u[rMobile.value]={pass:rPass.value,balance:0};
+save(u);
+rMsg.innerText="✅ Registered successfully";
+}
+
+function login(){
+let u=users();
+if(lMobile.value==="shubham123" && lPass.value==="shubham123"){
+currentUser="OWNER";
+showDashboard(true);
+return;
+}
+if(!u[lMobile.value]||u[lMobile.value].pass!==lPass.value){
+lMsg.innerText="❌ Login failed";return;
+}
+currentUser=lMobile.value;
+showDashboard(false);
+}
+
+function showDashboard(isOwner){
+registerBox.style.display="none";
+loginBox.style.display="none";
+dashboard.style.display="block";
+ownerPanel.style.display=isOwner?"block":"none";
+userMobile.innerText=isOwner?"OWNER":currentUser;
+loadMarket();
+updateBalance();
+if(isOwner) loadUsersData();
+}
+
+function updateBalance(){
+let u=users();
+balance.innerText=currentUser==="OWNER"?0:u[currentUser].balance;
+}
+
+function recharge(){
+let u=users();
+u[currentUser].balance+=100;
+save(u);updateBalance();
+}
+
+function withdraw(){
+let u=users();
+msg.innerText="💰 Withdraw $" + u[currentUser].balance;
+u[currentUser].balance=0;
+save(u);updateBalance();
+}
+
+function addDailyIncome(){
+let u=users();
+for(let m in u){u[m].balance+=10}
+save(u);
+msg.innerText="👑 Daily income added to all users";
+loadUsersData();
+}
+
+function addBalanceToUser(){
+let u=users();
+let m=userSelect.value;
+let amt=parseInt(ownerAmount.value);
+if(!amt||amt<=0)return;
+u[m].balance+=amt;
+save(u);
+loadUsersData();
+msg.innerText="✅ Balance added to "+m;
+}
+
+function loadUsersData(){
+let u=users();
+userTable.innerHTML="";
+userSelect.innerHTML="";
+let count=0;
+for(let m in u){
+count++;
+userTable.innerHTML+=`<tr><td>${m}</td><td>$${u[m].balance}</td></tr>`;
+userSelect.innerHTML+=`<option value="${m}">${m}</option>`;
+}
+totalUsers.innerText=count;
+}
+
+function buy(p){
+let u=users();
+if(u[currentUser].balance>=p){
+u[currentUser].balance-=p;
+save(u);updateBalance();
+}else msg.innerText="❌ Insufficient balance";
+}
+
+function loadMarket(){
+market.innerHTML="";
+items.forEach(i=>{
+market.innerHTML+=`
+<div class="item">
+<img src="https://via.placeholder.com/200x100?text=${i[0]}">
+<h4>${i[0]}</h4>
+<p>$${i[1]}</p>
+<button class="green" onclick="buy(${i[1]})">Buy</button>
+</div>`;
+});
+}
+
+function logout(){location.reload();}
+</script>
+
+</body>
+</html>
